@@ -5,28 +5,31 @@
     <meta name="viewport"
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Document</title>
+    <title></title>
 </head>
 <body>
-    <main>
+    <main class="">
         <nav class="bg-[#1F2435] text-white text-center py-3">
             <input id="user-id" type="text" placeholder="이름을 입력하세요" class="text-black" />
-            <input id="peer-input" type="text" placeholder="other peer id" class="text-black" />
             <button id="connect-btn">채팅 접속</button>
         </nav>
-        <section class="flex flex-2 min-h-[100vh]">
-            <div class="video-side grid grid-cols-4 bg-[#181B29]">
-                <div class=" h-[300px]">
+        <section class="flex h-[100%]">
+            <div class="video-side grid grid-cols-4 bg-[#181B29] flex-[3]">
+                <div class="min-h-[96.3vh]">
                     <video class="myvideo"  width="400" height="300"/>
                 </div>
             </div>
-            <div class="chat-side bg-[#262C41] w-[600px]">
-                <nav class="text-white text-center py-3">Chat</nav>
-                <ul class="text-white px-2">
-                    <li>name : hi</li>
-                    <li>name : hi</li>
-                    <li>name : hi</li>
-                </ul>
+            <div class="chat-side bg-[#262C41] flex-[1]">
+                <nav class="text-white text-center py-3">Chat <span class="text-xs text-gray-500/50"><span id="online-count" class="text-blue-500">?</span> 명 접속중</span></nav>
+                <div class="text-white px-2 list-none" id="room-list">
+                    <li class="text-center mb-2">채팅서버에 접속해주세요</li>
+                    <div class="flex justify-center" id="loading-spinner">
+                        <svg role="status" class="w-8 h-8 mr-2 text-gray-200 animate-spin dark:text-gray-600 fill-blue-600" viewBox="0 0 100 101" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M100 50.5908C100 78.2051 77.6142 100.591 50 100.591C22.3858 100.591 0 78.2051 0 50.5908C0 22.9766 22.3858 0.59082 50 0.59082C77.6142 0.59082 100 22.9766 100 50.5908ZM9.08144 50.5908C9.08144 73.1895 27.4013 91.5094 50 91.5094C72.5987 91.5094 90.9186 73.1895 90.9186 50.5908C90.9186 27.9921 72.5987 9.67226 50 9.67226C27.4013 9.67226 9.08144 27.9921 9.08144 50.5908Z" fill="currentColor"/>
+                            <path d="M93.9676 39.0409C96.393 38.4038 97.8624 35.9116 97.0079 33.5539C95.2932 28.8227 92.871 24.3692 89.8167 20.348C85.8452 15.1192 80.8826 10.7238 75.2124 7.41289C69.5422 4.10194 63.2754 1.94025 56.7698 1.05124C51.7666 0.367541 46.6976 0.446843 41.7345 1.27873C39.2613 1.69328 37.813 4.19778 38.4501 6.62326C39.0873 9.04874 41.5694 10.4717 44.0505 10.1071C47.8511 9.54855 51.7191 9.52689 55.5402 10.0491C60.8642 10.7766 65.9928 12.5457 70.6331 15.2552C75.2735 17.9648 79.3347 21.5619 82.5849 25.841C84.9175 28.9121 86.7997 32.2913 88.1811 35.8758C89.083 38.2158 91.5421 39.6781 93.9676 39.0409Z" fill="currentFill"/>
+                        </svg>
+                    </div>
+                </div>
             </div>
         </section>
     </main>
@@ -35,26 +38,27 @@
 <script src="/socket.io/socket.io.js"></script>
 <script src="https://unpkg.com/peerjs@1.3.2/dist/peerjs.min.js"></script>
 <script>
+
     let socket;
     let peer;
-    let myPeerId;
-    let roomName = '2번방';
+    let peerId;
+    let roomName = '전체 채팅방';
     let myVideoStream;
+    let calls = [];
+    let currentRoomList = [];
+    let currentRoomId = undefined;
 
     const myVideo = document.querySelector('.myvideo');
     const connectBtn = document.querySelector('#connect-btn');
+    const onlineCount = document.querySelector('#online-count');
     const userIdInput = document.querySelector('#user-id');
-    const peerInput = document.querySelector('#peer-input');
+    const roomListElement = document.querySelector('#room-list');
+    const loadingSpinner = document.querySelector('#loading-spinner');
     const videoSide = document.querySelector('.video-side');
-    connectBtn.addEventListener('click',(e)=>init());
-
+    connectBtn.addEventListener('click',createSocketAndLogin);
     getMyVideo();
-    function init(){
-        openMypeerAndSocket();
-        listenOtherPeer();
-        listenOtherCall();
-        listenRoomList();
-    }
+    createPeer();
+    listenOtherCall();
 
     function getMyVideo(){
         myVideo.addEventListener("loadedmetadata", () => {
@@ -69,15 +73,26 @@
 
         })
     }
-    function openMypeerAndSocket(){
-         socket = io();
-         peer = new Peer();
+    function createSocketAndLogin(){
+        if(userIdInput.value.length <= 0) return alert('닉네임을 입력해주세요');
+        socket = io();
+        socket.emit('login',userIdInput.value)
+        listenOnlineUserList();
+        listenRoomList();
+        connectBtn.setAttribute('disabled',true);
+    }
+    function listenOnlineUserList(){
+        socket.on('online list',data=>{
+            console.log(data)
+            onlineCount.innerHTML = data.length;
+        })
+    }
+    function createPeer(){
+        peer = new Peer();
         peer.on('open',(id)=>{
-            console.log('My Peer id : ',id)
+            console.log('My Peer id : ',id);
             myPeerId = id;
-            joinSocketRoom();
-            myVideo.setAttribute('id',id)
-
+            myVideo.setAttribute('id',id);
         })
     }
     function listenOtherPeer(){
@@ -89,23 +104,47 @@
         })
     }
     function connectToOtherPeer(){
-        const conn = peer.connect(peerInput.value);
+        const conn = peer.connect('input peer id here');
         conn.on('open',()=>{
             conn.send('hihi!')
         })
     }
-    function callToOtherpeer(peerID){
-        const call = peer.call(peerID,myVideoStream);
-        console.log(peer)
-        call.on('stream',(stream)=>{
-            console.log('받장 받은 stream',stream)
-            createNewOtherVideo(stream);
+    function displayRoomList(roomList){
+        const ul = document.createElement('div');
+        roomList.forEach(room=>{
+            const li = document.createElement('li');
+            li.innerHTML=`
+                <li class="flex justify-between bg-white/20 py-3 px-2 rounded items-center my-2 hover:-translate-y-1 transition-all">
+                    <h5>${room.roomName}</h5>
+                    <div class="flex gap-2 items-center text-sm">
+                        <div class='text-black/50'>${room.userList.length} 명 참가중</div>
+                        <button class="bg-blue-500/80 px-2 py-1 rounded hover:bg-blue-500" onClick='joinRoom(${room.id})'>참가</button>
+                        <button class="bg-red-500/80 px-2 py-1 rounded hover:bg-red-500" onClick='leaveRoom(${room.id})'>나기기</button>
+                    </div>
+                </li>
+            `;
+            ul.appendChild(li);
         })
+        roomListElement.innerHTML = '';
+        roomListElement.appendChild(ul);
+        loadingSpinner.classList.add('hidden');
+        updateCameraList(roomList);
+    }
+    function joinRoom(roomId){
+        currentRoomId = roomId;
+        socket.emit('join room',{roomId,peerId:peer.id,userId:userIdInput.value,socketId:socket.id})
+        const userList = currentRoomList.find(r => r.id === roomId).userList;
+        userList.forEach(user=>{
+            if(user.peerId !== peer.id){
+                callToOtherpeer(user.peerId);
+            }
+        })
+        console.log(calls)
     }
     function listenOtherCall(){
         peer.on('call',call=>{
+            calls.push(call);
             call.answer(myVideoStream);
-            console.log(call)
             call.on('stream',(stream)=>{
                 console.log('전화받은 stream',stream)
                 createNewOtherVideo(stream);
@@ -124,13 +163,46 @@
         video.play();
         videoSide.appendChild(div);
     }
-    function joinSocketRoom(){
-        socket.emit('join room',{roomName,peerId:myPeerId,userId:userIdInput.value,socketId:socket.id})
+    function callToOtherpeer(peerID){
+        const call = peer.call(peerID,myVideoStream);
+        calls.push(call);
+        call.on('stream',(stream)=>{
+            console.log('받장 받은 stream',stream)
+            createNewOtherVideo(stream);
+        })
     }
     function listenRoomList(){
         socket.on('room list',(roomList)=>{
-            console.log(roomList)
+            currentRoomList = roomList;
+            displayRoomList(roomList);
         })
+    }
+    function leaveRoom(roomId){
+        calls.forEach(call=>{
+            console.log(call)
+            call.close();
+        })
+        calls = [];
+        socket.emit('leave room',{roomId,socketId:socket.id});
+
+        const videos = document.querySelectorAll('video');
+        for(let video of videos){
+            if(video.className !== 'myvideo'){
+                video.parentElement.remove();
+            }
+        }
+        currentRoomId = undefined;
+    }
+    function updateCameraList(roomList){
+        const videos  = document.querySelectorAll('video');
+        if(!roomList.find(r=> r.id === currentRoomId)) return;
+        const currentUserList = roomList.find(r=> r.id === currentRoomId).userList.map(u=> u.peerId);
+        console.log('currentUserList',currentUserList)
+        for(let video of videos){
+            if(!currentUserList.includes(video.id)){
+                video.parentElement.remove();
+            }
+        }
     }
 
 
