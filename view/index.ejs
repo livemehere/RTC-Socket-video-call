@@ -47,6 +47,7 @@
     let calls = [];
     let currentRoomList = [];
     let currentRoomId = undefined;
+    let peerAndStreams = [];
 
     const myVideo = document.querySelector('.myvideo');
     const connectBtn = document.querySelector('#connect-btn');
@@ -143,19 +144,15 @@
             call.answer(myVideoStream);
             call.on('stream',(stream)=>{
                 createNewOtherVideo(stream);
+                peerAndStreams.push({peerId:call.peer, stream:stream.id})
             })
         })
     }
     function createNewOtherVideo(stream){
-        // const thisPeerId = calls.find(c=> c._remoteStream.id === stream.id).peer;
-        // const thisUser = currentRoomList.find(r=> r.id === currentRoomId).userList.find(u=> u.peerId === thisPeerId);
+        console.log(stream)
         const div = document.createElement('div');
-        // const p = document.createElement('p');
-        // p.innerHTML = thisUser.userId;
         const video = document.createElement('video');
         div.appendChild(video);
-        // div.appendChild(p);
-        // p.className = 'text-white text-center';
         div.className = 'h-[100%] max-h-[588px] max-w-[784px]';
         video.setAttribute('width','100%');
         video.setAttribute('height','100%');
@@ -170,14 +167,16 @@
         calls.push(call);
         call.on('stream',(stream)=>{
             createNewOtherVideo(stream);
+            peerAndStreams.push({peerId:call.peer, stream:stream.id})
         })
     }
     function listenRoomList(){
         socket.on('room list',(roomList)=>{
-            console.log(roomList);
+            console.log('roomList',roomList);
+            console.log('peerAndStreams',peerAndStreams)
             currentRoomList = roomList;
             displayRoomList(roomList);
-            // updateCameraList(roomList);
+            updateCameraList();
         })
     }
 
@@ -197,22 +196,21 @@
         currentRoomId = undefined;
         handleJoinButton();
     }
-    // function updateCameraList(roomList) {
-    //     // if(JSON.stringify(currentRoomList) === JSON.stringify(roomList)) return;
-    //     if(currentRoomId) return;
-    //     console.log('roomList',roomList)
-    //     const videos = document.querySelectorAll('video');
-    //     console.log(videos)
-    //     if (!roomList.find(r => r.id === currentRoomId)) return;
-    //     const currentUserList = roomList.find(r => r.id === currentRoomId).userList.map(u =>
-    //         u.peerId
-    //     );
-    //     for (let video of videos) {
-    //         if (!currentUserList.includes(video.id)) {
-    //             video.parentElement.remove();
-    //         }
-    //     }
-    // }
+    function updateCameraList(roomList) {
+        if(!currentRoomList.find(r=> r.id === currentRoomId)) return;
+        const currentPeers = currentRoomList.find(r=> r.id === currentRoomId).userList.map(u=>u.peerId);
+        console.log(peerAndStreams);
+        [...peerAndStreams].forEach(p=>{
+            if(!currentPeers.includes(p.peerId)){
+                const leaveUsersVideo = document.getElementById(p.stream);
+                console.log(leaveUsersVideo)
+                leaveUsersVideo.parentElement.remove();
+                peerAndStreams.splice(peerAndStreams.findIndex(s=> s.peerId === p.peerId),1);
+                console.log(peerAndStreams)
+            }
+        })
+
+    }
     function handleJoinButton(){
         if(!currentRoomId) return;
         const joinBtns = document.querySelectorAll('.join-btn');
