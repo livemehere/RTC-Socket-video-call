@@ -9,14 +9,14 @@
 </head>
 <body>
     <main class="">
-        <nav class="bg-[#1F2435] text-white text-center py-3">
-            <input id="user-id" type="text" placeholder="이름을 입력하세요" class="text-black" />
-            <button id="connect-btn">채팅 접속</button>
+        <nav class="bg-[#1F2435] text-white text-center py-3 flex items-center justify-center gap-1">
+            <input id="user-id" type="text" id="first_name" class="max-w-[200px] bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="이름을 입력하고 로그인하세요">
+            <button id="connect-btn" type="button" class="py-2.5 px-5 mr-2  text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-200 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700">채팅 접속</button>
         </nav>
         <section class="flex h-[100%]">
-            <div class="video-side grid grid-cols-4 bg-[#181B29] flex-[3]">
-                <div class="min-h-[96.3vh]">
-                    <video class="myvideo"  width="400" height="300"/>
+            <div class="video-side grid col-auto bg-[#181B29] flex-[3] gap-2 p-5 min-h-[96.3vh]">
+                <div class="w-[100%] max-h-[588px] max-w-[784px]">
+                    <video class="myvideo" width="100%" height="100%"/>
                 </div>
             </div>
             <div class="chat-side bg-[#262C41] flex-[1]">
@@ -56,6 +56,7 @@
     const loadingSpinner = document.querySelector('#loading-spinner');
     const videoSide = document.querySelector('.video-side');
     connectBtn.addEventListener('click',createSocketAndLogin);
+
     getMyVideo();
     createPeer();
     listenOtherCall();
@@ -70,7 +71,6 @@
         }).then(stream=>{
             myVideo.srcObject = stream;
             myVideoStream = stream;
-
         })
     }
     function createSocketAndLogin(){
@@ -80,26 +80,23 @@
         listenOnlineUserList();
         listenRoomList();
         connectBtn.setAttribute('disabled',true);
+        userIdInput.setAttribute('disabled',true);
     }
     function listenOnlineUserList(){
         socket.on('online list',data=>{
-            console.log(data)
             onlineCount.innerHTML = data.length;
         })
     }
     function createPeer(){
         peer = new Peer();
         peer.on('open',(id)=>{
-            console.log('My Peer id : ',id);
             myPeerId = id;
             myVideo.setAttribute('id',id);
         })
     }
     function listenOtherPeer(){
         peer.on('connection',(conn)=>{
-            console.log('someone connected :',conn);
             conn.on('data',(data)=>{
-                console.log('받은 데이터 : ',data)
             })
         })
     }
@@ -114,11 +111,11 @@
         roomList.forEach(room=>{
             const li = document.createElement('li');
             li.innerHTML=`
-                <li class="flex justify-between bg-white/20 py-3 px-2 rounded items-center my-2 hover:-translate-y-1 transition-all">
+                <li class="flex justify-between bg-white/20 py-3 px-2 rounded items-center my-2 hover:-translate-y-1 transition-all ${currentRoomId === room.id && '!bg-black/50'}">
                     <h5>${room.roomName}</h5>
                     <div class="flex gap-2 items-center text-sm">
-                        <div class='text-black/50'>${room.userList.length} 명 참가중</div>
-                        <button class="join-btn bg-blue-500/80 px-2 py-1 rounded hover:bg-blue-500" onClick='joinRoom(${room.id})'>참가</button>
+                        <div class='text-black/50 ${currentRoomId === room.id && '!text-white'}'>${room.userList.length} 명 참가중</div>
+                        <button class="join-btn bg-blue-500/80 px-2 py-1 rounded hover:bg-blue-500 " onClick='joinRoom(${room.id})'>참가</button>
                         <button class="bg-red-500/80 px-2 py-1 rounded hover:bg-red-500" onClick='leaveRoom(${room.id})'>나기기</button>
                     </div>
                 </li>
@@ -128,7 +125,6 @@
         roomListElement.innerHTML = '';
         roomListElement.appendChild(ul);
         loadingSpinner.classList.add('hidden');
-        updateCameraList(roomList);
         handleJoinButton();
     }
     function joinRoom(roomId){
@@ -140,48 +136,53 @@
                 callToOtherpeer(user.peerId);
             }
         })
-        console.log(calls)
-
     }
     function listenOtherCall(){
         peer.on('call',call=>{
             calls.push(call);
             call.answer(myVideoStream);
             call.on('stream',(stream)=>{
-                console.log('전화받은 stream',stream)
                 createNewOtherVideo(stream);
             })
         })
     }
     function createNewOtherVideo(stream){
+        // const thisPeerId = calls.find(c=> c._remoteStream.id === stream.id).peer;
+        // const thisUser = currentRoomList.find(r=> r.id === currentRoomId).userList.find(u=> u.peerId === thisPeerId);
         const div = document.createElement('div');
+        // const p = document.createElement('p');
+        // p.innerHTML = thisUser.userId;
         const video = document.createElement('video');
         div.appendChild(video);
-        div.classList.add('h-[300px]');
-        video.setAttribute('width','400');
-        video.setAttribute('height','300');
+        // div.appendChild(p);
+        // p.className = 'text-white text-center';
+        div.className = 'h-[100%] max-h-[588px] max-w-[784px]';
+        video.setAttribute('width','100%');
+        video.setAttribute('height','100%');
         video.setAttribute('id',stream.id);
         video.srcObject = stream;
         video.play();
         videoSide.appendChild(div);
+
     }
     function callToOtherpeer(peerID){
         const call = peer.call(peerID,myVideoStream);
         calls.push(call);
         call.on('stream',(stream)=>{
-            console.log('받장 받은 stream',stream)
             createNewOtherVideo(stream);
         })
     }
     function listenRoomList(){
         socket.on('room list',(roomList)=>{
+            console.log(roomList);
             currentRoomList = roomList;
             displayRoomList(roomList);
+            // updateCameraList(roomList);
         })
     }
+
     function leaveRoom(roomId){
         calls.forEach(call=>{
-            console.log(call)
             call.close();
         })
         calls = [];
@@ -196,22 +197,40 @@
         currentRoomId = undefined;
         handleJoinButton();
     }
-    function updateCameraList(roomList){
-        const videos  = document.querySelectorAll('video');
-        if(!roomList.find(r=> r.id === currentRoomId)) return;
-        const currentUserList = roomList.find(r=> r.id === currentRoomId).userList.map(u=> u.peerId);
-        console.log('currentUserList',currentUserList)
-        for(let video of videos){
-            if(!currentUserList.includes(video.id)){
-                video.parentElement.remove();
-            }
-        }
-    }
+    // function updateCameraList(roomList) {
+    //     // if(JSON.stringify(currentRoomList) === JSON.stringify(roomList)) return;
+    //     if(currentRoomId) return;
+    //     console.log('roomList',roomList)
+    //     const videos = document.querySelectorAll('video');
+    //     console.log(videos)
+    //     if (!roomList.find(r => r.id === currentRoomId)) return;
+    //     const currentUserList = roomList.find(r => r.id === currentRoomId).userList.map(u =>
+    //         u.peerId
+    //     );
+    //     for (let video of videos) {
+    //         if (!currentUserList.includes(video.id)) {
+    //             video.parentElement.remove();
+    //         }
+    //     }
+    // }
     function handleJoinButton(){
         if(!currentRoomId) return;
         const joinBtns = document.querySelectorAll('.join-btn');
         for(let btn of joinBtns){
             btn.toggleAttribute('disabled');
+        }
+    }
+
+    function addUserIdIntoVideo(){
+        const videos  = document.querySelectorAll('video');
+        const userPeerIdAnduserId = currentRoomList.find(r=> r.id === currentRoomId).userList.map(u=>
+            ({peerId:u.peerId,userId:u.userId})
+        );
+
+        for(let video of videos){
+                const p = document.createElement('p');
+                p.innerHTML = userPeerIdAnduserId.find(u=> u.peerId === video.id).userId;
+                video.parentElement.appendChild(p);
         }
     }
 
