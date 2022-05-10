@@ -118,7 +118,7 @@
                     <h5>${room.roomName}</h5>
                     <div class="flex gap-2 items-center text-sm">
                         <div class='text-black/50'>${room.userList.length} 명 참가중</div>
-                        <button class="bg-blue-500/80 px-2 py-1 rounded hover:bg-blue-500" onClick='joinRoom(${room.id})'>참가</button>
+                        <button class="join-btn bg-blue-500/80 px-2 py-1 rounded hover:bg-blue-500" onClick='joinRoom(${room.id})'>참가</button>
                         <button class="bg-red-500/80 px-2 py-1 rounded hover:bg-red-500" onClick='leaveRoom(${room.id})'>나기기</button>
                     </div>
                 </li>
@@ -129,6 +129,7 @@
         roomListElement.appendChild(ul);
         loadingSpinner.classList.add('hidden');
         updateCameraList(roomList);
+        handleJoinButton();
     }
     function joinRoom(roomId){
         currentRoomId = roomId;
@@ -140,6 +141,7 @@
             }
         })
         console.log(calls)
+
     }
     function listenOtherCall(){
         peer.on('call',call=>{
@@ -192,6 +194,7 @@
             }
         }
         currentRoomId = undefined;
+        handleJoinButton();
     }
     function updateCameraList(roomList){
         const videos  = document.querySelectorAll('video');
@@ -204,7 +207,13 @@
             }
         }
     }
-
+    function handleJoinButton(){
+        if(!currentRoomId) return;
+        const joinBtns = document.querySelectorAll('.join-btn');
+        for(let btn of joinBtns){
+            btn.toggleAttribute('disabled');
+        }
+    }
 
 </script>
 
