@@ -29,7 +29,6 @@
             </div>
         </section>
     </main>
-
 </body>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="/socket.io/socket.io.js"></script>
@@ -37,12 +36,16 @@
 <script>
     let socket = io();
     let peer = new Peer();
+    let myPeerId;
+    let userId = '공태민짱';
+    let roomName = '2번방';
     let myVideoStream;
+
     const myVideo = document.querySelector('#myvideo');
     const connectBtn = document.querySelector('#connect-btn');
     const peerInput = document.querySelector('#peer-input');
     const videoSide = document.querySelector('.video-side');
-    connectBtn.addEventListener('click',callToOtherpeer);
+    connectBtn.addEventListener('click',(e)=>callToOtherpeer(peerInput.value));
 
     init();
     function init(){
@@ -50,6 +53,8 @@
         openMypeer();
         listenOtherPeer();
         listenOtherCall();
+        listenRoomList();
+        handleBeforeLeave();
     }
 
     function getMyVideo(){
@@ -68,6 +73,8 @@
     function openMypeer(){
         peer.on('open',(id)=>{
             console.log('My Peer id : ',id)
+            myPeerId = id;
+            joinSocketRoom();
         })
     }
     function listenOtherPeer(){
@@ -83,10 +90,10 @@
         conn.on('open',()=>{
             conn.send('hihi!')
         })
-
     }
-    function callToOtherpeer(){
-        const call = peer.call(peerInput.value,myVideoStream);
+    function callToOtherpeer(peerID){
+        const call = peer.call(peerID,myVideoStream);
+        console.log(peer)
         call.on('stream',(stream)=>{
             console.log('받장 받은 stream',stream)
             createNewOtherVideo(stream);
@@ -102,7 +109,6 @@
             })
         })
     }
-
     function createNewOtherVideo(stream){
         const div = document.createElement('div');
         const video = document.createElement('video');
@@ -114,6 +120,19 @@
         video.srcObject = stream;
         video.play();
         videoSide.appendChild(div);
+    }
+    function joinSocketRoom(){
+        socket.emit('join room',{roomName,peerId:myPeerId,userId,socketId:socket.id})
+    }
+    function listenRoomList(){
+        socket.on('room list',(roomList)=>{
+            console.log(roomList)
+        })
+    }
+    function handleBeforeLeave(){
+        socket.on('disconnect',()=>{
+            socket.emit('leave room','나나간다!')
+        })
     }
 
 </script>
