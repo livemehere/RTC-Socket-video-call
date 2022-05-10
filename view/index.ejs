@@ -49,7 +49,6 @@
     connectBtn.addEventListener('click',(e)=>init());
 
     getMyVideo();
-
     function init(){
         openMypeerAndSocket();
         listenOtherPeer();
@@ -77,6 +76,8 @@
             console.log('My Peer id : ',id)
             myPeerId = id;
             joinSocketRoom();
+            myVideo.setAttribute('id',id)
+
         })
     }
     function listenOtherPeer(){
