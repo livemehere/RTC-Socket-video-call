@@ -67,7 +67,7 @@
             myVideo.play();
         });
         navigator.mediaDevices.getUserMedia({
-            audio:false,
+            audio:true,
             video:true
         }).then(stream=>{
             myVideo.srcObject = stream;
