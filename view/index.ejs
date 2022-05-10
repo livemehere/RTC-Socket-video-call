@@ -37,15 +37,19 @@
 <script>
     let socket = io();
     let peer = new Peer();
+    let myVideoStream;
     const myVideo = document.querySelector('#myvideo');
     const connectBtn = document.querySelector('#connect-btn');
     const peerInput = document.querySelector('#peer-input');
-    init();
+    const videoSide = document.querySelector('.video-side');
+    connectBtn.addEventListener('click',callToOtherpeer);
 
+    init();
     function init(){
         getMyVideo();
         openMypeer();
         listenOtherPeer();
+        listenOtherCall();
     }
 
     function getMyVideo(){
@@ -57,6 +61,7 @@
             video:true
         }).then(stream=>{
             myVideo.srcObject = stream;
+            myVideoStream = stream;
 
         })
     }
@@ -65,7 +70,6 @@
             console.log('My Peer id : ',id)
         })
     }
-
     function listenOtherPeer(){
         peer.on('connection',(conn)=>{
             console.log('someone connected :',conn);
@@ -74,7 +78,6 @@
             })
         })
     }
-
     function connectToOtherPeer(){
         const conn = peer.connect(peerInput.value);
         conn.on('open',()=>{
@@ -82,8 +85,36 @@
         })
 
     }
+    function callToOtherpeer(){
+        const call = peer.call(peerInput.value,myVideoStream);
+        call.on('stream',(stream)=>{
+            console.log('받장 받은 stream',stream)
+            createNewOtherVideo(stream);
+        })
+    }
+    function listenOtherCall(){
+        peer.on('call',call=>{
+            call.answer(myVideoStream);
+            console.log(call)
+            call.on('stream',(stream)=>{
+                console.log('전화받은 stream',stream)
+                createNewOtherVideo(stream);
+            })
+        })
+    }
 
-    connectBtn.addEventListener('click',connectToOtherPeer);
+    function createNewOtherVideo(stream){
+        const div = document.createElement('div');
+        const video = document.createElement('video');
+        div.appendChild(video);
+        div.classList.add('h-[300px]');
+        video.setAttribute('width','400');
+        video.setAttribute('height','300');
+        video.setAttribute('id',Date.now());
+        video.srcObject = stream;
+        video.play();
+        videoSide.appendChild(div);
+    }
 
 </script>
 
