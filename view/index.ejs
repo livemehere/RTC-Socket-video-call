@@ -67,7 +67,7 @@
             myVideo.play();
         });
         navigator.mediaDevices.getUserMedia({
-            audio:true,
+            audio:false,
             video:true
         }).then(stream=>{
             myVideo.srcObject = stream;
@@ -150,6 +150,7 @@
     }
     function createNewOtherVideo(stream){
         console.log(stream)
+        console.log(calls)
         const div = document.createElement('div');
         const video = document.createElement('video');
         div.appendChild(video);
@@ -160,7 +161,6 @@
         video.srcObject = stream;
         video.play();
         videoSide.appendChild(div);
-
     }
     function callToOtherpeer(peerID){
         const call = peer.call(peerID,myVideoStream);
