@@ -11,8 +11,8 @@ function socketHandler(io) {
     console.log("connected!");
     socket.on("login", (userId) => {
       onlineList.push({ userId, socketId: socket.id });
-      // io.emit("online list", onlineList);
-      // io.emit("room list", roomList);
+      io.emit("online list", onlineList);
+      io.emit("room list", roomList);
       console.log("roomList", roomList);
       console.log("onlineList", onlineList);
     });
@@ -24,7 +24,7 @@ function socketHandler(io) {
         roomName: roomName,
         userList: [],
       });
-      // io.emit("room list", roomList);
+      io.emit("room list", roomList);
       console.log(roomList);
     });
 
