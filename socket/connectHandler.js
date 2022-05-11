@@ -11,13 +11,25 @@ function socketHandler(io) {
     console.log("connected!");
     socket.on("login", (userId) => {
       onlineList.push({ userId, socketId: socket.id });
-      io.emit("online list", onlineList);
-      io.emit("room list", roomList);
+      // io.emit("online list", onlineList);
+      // io.emit("room list", roomList);
       console.log("roomList", roomList);
       console.log("onlineList", onlineList);
     });
 
+    socket.on("create room", ({ roomId, roomName }) => {
+      if (roomList.find((r) => r.id === roomId)) return;
+      roomList.push({
+        id: roomId,
+        roomName: roomName,
+        userList: [],
+      });
+      // io.emit("room list", roomList);
+      console.log(roomList);
+    });
+
     socket.on("join room", ({ roomId, peerId, userId, socketId }) => {
+      console.log("emit join room");
       roomList.find((r) => r.id === roomId).userList.push({ userId, peerId, socketId, startTime: new Date() });
       io.emit("room list", roomList);
       console.log("room list", roomList);
